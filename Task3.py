@@ -12,8 +12,7 @@ db = SQLAlchemy(app)
 
 # Fund model
 class Fund(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fund_id = db.Column(db.String(10), unique=True, nullable=False)
+    fund_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     fund_name = db.Column(db.String(100), nullable=False)
     fund_manager_name = db.Column(db.String(100), nullable=False)
     fund_description = db.Column(db.String(200), nullable=False)
@@ -42,11 +41,11 @@ def get_funds():
     funds = Fund.query.all()
     return jsonify([fund.to_dict() for fund in funds])
 
+# Route to create a new fund
 @app.route('/funds/add', methods=['POST'])
 def create_fund():
     data = request.json
     new_fund = Fund(
-        fund_id=data['fund_id'],
         fund_name=data['fund_name'],
         fund_manager_name=data['fund_manager_name'],
         fund_description=data['fund_description'],
@@ -58,20 +57,19 @@ def create_fund():
     db.session.commit()
     return jsonify(new_fund.to_dict()), 201
 
-
 # Route to get a specific fund by fund_id
-@app.route('/funds/<fund_id>', methods=['GET'])
+@app.route('/funds/<int:fund_id>', methods=['GET'])
 def get_fund(fund_id):
-    fund = Fund.query.filter_by(fund_id=fund_id).first()
+    fund = Fund.query.get(fund_id)
     if fund is None:
         abort(404)
     return jsonify(fund.to_dict())
 
 # Route to update a fund's performance
-@app.route('/funds/<fund_id>', methods=['PUT'])
+@app.route('/funds/<int:fund_id>', methods=['PUT'])
 def update_fund(fund_id):
     data = request.json
-    fund = Fund.query.filter_by(fund_id=fund_id).first()
+    fund = Fund.query.get(fund_id)
     if fund is None:
         abort(404)
     fund.fund_performance = data['fund_performance']
@@ -79,9 +77,9 @@ def update_fund(fund_id):
     return jsonify(fund.to_dict())
 
 # Route to delete a fund by fund_id
-@app.route('/funds/<fund_id>', methods=['DELETE'])
+@app.route('/funds/<int:fund_id>', methods=['DELETE'])
 def delete_fund(fund_id):
-    fund = Fund.query.filter_by(fund_id=fund_id).first()
+    fund = Fund.query.get(fund_id)
     if fund is None:
         abort(404)
     db.session.delete(fund)

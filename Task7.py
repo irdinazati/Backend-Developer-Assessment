@@ -3,49 +3,85 @@ Task 7: Testing Write test cases to ensure the proper functioning of both the AP
 cover various scenarios and edge cases, including testing the SQL queries and verifying data integrity in the database.
 """
 
-import unittest
-from app import app, db, Fund
+import pytest
+from Task3 import app, db, Fund
 
-class FundAPITestCase(unittest.TestCase):
-    def setUp(self):
-        self.app = app.test_client()
-        self.app.testing = True
-        with app.app_context():
-            db.create_all()
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_funds.db'
+    client = app.test_client()
 
-    def tearDown(self):
-        with app.app_context():
-            db.session.remove()
-            db.drop_all()
+    # Create tables and initialize the database
+    with app.app_context():
+        db.create_all()
 
-    def test_create_fund(self):
-        response = self.app.post('/funds', json={
-            'fund_id': 'F01',
-            'fund_name': 'Test Fund',
-            'fund_manager_name': 'John Doe',
-            'fund_description': 'A test fund',
-            'fund_nav': 1000000,
-            'fund_date_of_creation': '2024-07-26',
-            'fund_performance': 10.5
-        })
-        self.assertEqual(response.status_code, 201)
-        self.assertIn('Test Fund', response.get_data(as_text=True))
+    yield client
 
-    def test_get_fund(self):
-        response = self.app.post('/funds', json={
-            'fund_id': 'F02',
-            'fund_name': 'Test Fund 2',
-            'fund_manager_name': 'Jane Doe',
-            'fund_description': 'Another test fund',
-            'fund_nav': 2000000,
-            'fund_date_of_creation': '2024-07-26',
-            'fund_performance': 15.5
-        })
-        self.assertEqual(response.status_code, 201)
+    # Drop tables after tests
+    with app.app_context():
+        db.drop_all()
 
-        response = self.app.get('/funds/F02')
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('Test Fund 2', response.get_data(as_text=True))
+def test_create_fund(client):
+    response = client.post('/funds/add', json={
+        'fund_id': '1',  # Ensure fund_id is included
+        'fund_name': 'Growth Fund',
+        'fund_manager_name': 'Irdina Izzati',
+        'fund_description': 'A high-growth fund',
+        'fund_nav': 100.0,
+        'fund_date_of_creation': '2024-07-30',
+        'fund_performance': 5.0
+    })
+    assert response.status_code == 201
+    assert b'Growth Fund' in response.data
 
-if __name__ == '__main__':
-    unittest.main()
+def test_get_fund(client):
+    client.post('/funds/add', json={
+        'fund_id': '1',  # Ensure fund_id is included
+        'fund_name': 'Growth Fund',
+        'fund_manager_name': 'Irdina Izzati',
+        'fund_description': 'A high-growth fund',
+        'fund_nav': 100.0,
+        'fund_date_of_creation': '2024-07-30',
+        'fund_performance': 5.0
+    })
+    response = client.get('/funds/1')
+    assert response.status_code == 200
+    assert b'Growth Fund' in response.data
+
+def test_update_fund(client):
+    client.post('/funds/add', json={
+        'fund_id': '1',  # Ensure fund_id is included
+        'fund_name': 'Growth Fund',
+        'fund_manager_name': 'Irdina Izzati',
+        'fund_description': 'A high-growth fund',
+        'fund_nav': 100.0,
+        'fund_date_of_creation': '2024-07-30',
+        'fund_performance': 5.0
+    })
+    response = client.put('/funds/1', json={'fund_performance': 10.0})
+    assert response.status_code == 200
+    assert b'10.0' in response.data
+
+def test_delete_fund(client):
+    client.post('/funds/add', json={
+        'fund_id': '1',  # Ensure fund_id is included
+        'fund_name': 'Growth Fund',
+        'fund_manager_name': 'Irdina Izzati',
+        'fund_description': 'A high-growth fund',
+        'fund_nav': 100.0,
+        'fund_date_of_creation': '2024-07-30',
+        'fund_performance': 5.0
+    })
+    response = client.delete('/funds/1')
+    assert response.status_code == 200
+    assert b'Fund deleted' in response.data
+
+def test_not_found(client):
+    response = client.get('/funds/999')  # Assuming 999 is a non-existent ID
+    assert response.status_code == 404
+
+def test_bad_request(client):
+    response = client.post('/funds/add', json={})
+    assert response.status_code == 400
+    assert b'Missing required fields' in response.data  # Adjust based on actual error message

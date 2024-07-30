@@ -44,7 +44,7 @@ if __name__ == "__main__":
     fund = InvestmentFund(
         fund_id="F01",
         fund_name="Global Growth Fund",
-        fund_manager_name="JIrdina Izzati",
+        fund_manager_name="Irdina Izzati",
         fund_description="A diversified fund focusing on global equities.",
         fund_nav=1000000,
         fund_date_of_creation="2024-07-26",
